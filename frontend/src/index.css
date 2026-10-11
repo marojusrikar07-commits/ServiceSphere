@@ -1377,3 +1377,29 @@ a {
     flex-direction: column;
   }
 }
+.auth-forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+}
+
+.auth-forgot-button,
+.auth-back-button {
+  border: none;
+  background: transparent;
+  color: var(--primary, #2563eb);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.auth-forgot-button:hover,
+.auth-back-button:hover {
+  text-decoration: underline;
+}
+
+.auth-back-button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+}

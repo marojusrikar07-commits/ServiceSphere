@@ -8,6 +8,9 @@ function Dashboard({ user, onLogout }) {
   const [services, setServices] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [providerProfile, setProviderProfile] = useState(null);
+  const [providersForService, setProvidersForService] = useState([]);
+  const [providersLoading, setProvidersLoading] = useState(false);
+  const [providerLoadError, setProviderLoadError] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -100,6 +103,65 @@ function Dashboard({ user, onLogout }) {
     loadData();
   }, [user.id, isProvider]);
 
+  // Load only active provider offerings for the selected service.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProvidersForService = async () => {
+      if (!bookingForm.serviceId || isProvider) {
+        setProvidersForService([]);
+        setProvidersLoading(false);
+        setProviderLoadError("");
+        return;
+      }
+
+      setProvidersLoading(true);
+      setProviderLoadError("");
+      setProvidersForService([]);
+
+      try {
+        const response = await api.get(
+          `/provider-services/service/${bookingForm.serviceId}`
+        );
+        if (cancelled) return;
+
+        const offerings = Array.isArray(response.data) ? response.data : [];
+        const activeOfferings = offerings.filter(
+          (item) => item.active === true || item.active === "true"
+        );
+
+        // Avoid duplicate dropdown entries if the API returns duplicate offerings.
+        const uniqueProviders = Array.from(
+          new Map(activeOfferings.map((item) => [String(item.providerId), item])).values()
+        );
+
+        setProvidersForService(uniqueProviders);
+        setBookingForm((current) => ({
+          ...current,
+          providerId:
+            uniqueProviders.length === 1
+              ? String(uniqueProviders[0].providerId)
+              : "",
+        }));
+      } catch (err) {
+        if (!cancelled) {
+          setProvidersForService([]);
+          setProviderLoadError(
+            err.response?.data?.message ||
+              "Could not load providers for this service. Please check the provider-services API."
+          );
+        }
+      } finally {
+        if (!cancelled) setProvidersLoading(false);
+      }
+    };
+
+    loadProvidersForService();
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingForm.serviceId, isProvider]);
+
   const visibleServices = services.filter((service) => {
     const matchesSearch =
       service.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -114,10 +176,14 @@ function Dashboard({ user, onLogout }) {
   });
 
   const handleBookingChange = (event) => {
-    setBookingForm({
-      ...bookingForm,
-      [event.target.name]: event.target.value,
-    });
+    const { name, value } = event.target;
+
+    setBookingForm((current) => ({
+      ...current,
+      [name]: value,
+      // A provider selected for one service may not offer another service.
+      ...(name === "serviceId" ? { providerId: "" } : {}),
+    }));
   };
 
   const createBooking = async (event) => {
@@ -365,10 +431,11 @@ function Dashboard({ user, onLogout }) {
                       <button
                         className="btn btn-primary"
                         onClick={() => {
-                          setBookingForm({
-                            ...bookingForm,
+                          setBookingForm((current) => ({
+                            ...current,
                             serviceId: String(service.id),
-                          });
+                            providerId: "",
+                          }));
 
                           document
                             .getElementById("create-booking")
@@ -412,16 +479,44 @@ function Dashboard({ user, onLogout }) {
                 </label>
 
                 <label>
-                  Provider ID
-                  <input
+                  Service provider
+                  <select
                     name="providerId"
-                    type="number"
-                    min="1"
                     value={bookingForm.providerId}
                     onChange={handleBookingChange}
-                    placeholder="Enter provider ID"
                     required
-                  />
+                    disabled={!bookingForm.serviceId || providersLoading || providersForService.length === 0}
+                  >
+                    <option value="">
+                      {!bookingForm.serviceId
+                        ? "Select a service first"
+                        : providersLoading
+                          ? "Finding available providers..."
+                          : "Select a provider"}
+                    </option>
+                    {providersForService.map((provider) => (
+                      <option key={provider.providerId} value={provider.providerId}>
+                        {provider.businessName || provider.providerName || `Provider ${provider.providerId}`}
+                        {provider.providerName && provider.businessName
+                          ? ` — ${provider.providerName}`
+                          : ""}
+                        {` — ${formatPrice(provider.servicePrice)}`}
+                      </option>
+                    ))}
+                  </select>
+                  {providerLoadError && (
+                    <small className="form-help" role="alert">{providerLoadError}</small>
+                  )}
+                  {!providersLoading && bookingForm.serviceId && !providerLoadError && providersForService.length === 0 && (
+                    <small className="form-help">
+                      No active providers offer this service yet.
+                    </small>
+                  )}
+                  {!providersLoading && providersForService.length === 1 && !providerLoadError && (
+                    <small className="form-help">
+                      One provider offers this service and has been selected automatically.
+                    </small>
+                  )}
                 </label>
 
                 <label>

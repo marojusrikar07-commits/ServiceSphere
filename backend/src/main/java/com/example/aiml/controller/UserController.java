@@ -10,8 +10,12 @@ import com.example.aiml.dto.LoginRequest;
 import com.example.aiml.dto.ProviderRegisterRequest;
 import com.example.aiml.dto.RegisterRequest;
 import com.example.aiml.dto.UserResponse;
+import com.example.aiml.dto.ForgotPasswordRequest;
+import com.example.aiml.dto.ResetPasswordRequest;
+
 import com.example.aiml.entity.User;
 import com.example.aiml.service.UserService;
+import com.example.aiml.service.PasswordResetService;
 
 import jakarta.validation.Valid;
 
@@ -21,9 +25,14 @@ import jakarta.validation.Valid;
 public class UserController {
 
     private final UserService userService;
+    private final PasswordResetService passwordResetService;
 
-    public UserController(UserService userService) {
+    public UserController(
+            UserService userService,
+            PasswordResetService passwordResetService) {
+
         this.userService = userService;
+        this.passwordResetService = passwordResetService;
     }
 
     // =========================
@@ -49,8 +58,7 @@ public class UserController {
     public ResponseEntity<UserResponse> registerProvider(
             @Valid @RequestBody ProviderRegisterRequest request) {
 
-        User savedUser =
-                userService.registerProvider(request);
+        User savedUser = userService.registerProvider(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -69,6 +77,39 @@ public class UserController {
 
         return ResponseEntity.ok(
                 UserResponse.fromUser(user)
+        );
+    }
+
+    // =========================
+    // FORGOT PASSWORD
+    // =========================
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        String message = passwordResetService.requestReset(
+                request.getEmail()
+        );
+
+        return ResponseEntity.ok(message);
+    }
+
+    // =========================
+    // RESET PASSWORD
+    // =========================
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        passwordResetService.resetPassword(
+                request.getToken(),
+                request.getNewPassword()
+        );
+
+        return ResponseEntity.ok(
+                "Password reset successfully. You can now log in."
         );
     }
 
