@@ -15,11 +15,9 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
-                        .allowedOrigins(
+                        .allowedOriginPatterns(
                                 "http://localhost:5173",
-                                "https://service-sphere-nine.vercel.app",
-                                "https://service-sphere-k8p72t664-srikar18.vercel.app",
-                                "https://service-sphere-116rhmakq-srikar18.vercel.app"
+                                "https://service-sphere-*.vercel.app"
                         )
                         .allowedMethods(
                                 "GET",
