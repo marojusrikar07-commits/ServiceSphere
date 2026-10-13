@@ -18,7 +18,8 @@ public class CorsConfig {
                         .allowedOrigins(
                                 "http://localhost:5173",
                                 "https://service-sphere-nine.vercel.app",
-                                "https://service-sphere-k8p72t664-srikar18.vercel.app"
+                                "https://service-sphere-k8p72t664-srikar18.vercel.app",
+                                "https://service-sphere-116rhmakq-srikar18.vercel.app"
                         )
                         .allowedMethods(
                                 "GET",
